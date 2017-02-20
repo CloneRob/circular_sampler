@@ -1,15 +1,14 @@
 use getopts::Options;
-use std::env;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
 
-pub fn print_usage(program: &str, opts: Options) {
+fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} SOURCE_DIR DEST_DIR [options]", program);
     print!("{}", opts.usage(&brief));
 }
 
-pub fn visit_dirs(dir: &Path) -> io::Result<Vec<PathBuf>> {
+fn visit_dirs(dir: &Path) -> io::Result<Vec<PathBuf>> {
     let mut files = Vec::new();
     if dir.is_dir() {
         for entry in try!(fs::read_dir(dir)) {
@@ -31,4 +30,33 @@ pub fn visit_dirs(dir: &Path) -> io::Result<Vec<PathBuf>> {
         }
     }
     Ok(files)
+}
+
+pub fn parse(args: Vec<String>) -> io::Result<Vec<PathBuf>> {
+    let program = args[0].clone();
+
+    let mut opts = Options::new();
+    opts.reqopt("s", "source", "Source folder of the image files", "DIR");
+    opts.optflag("h", "help", "Prints help menu");
+
+    let matches = match opts.parse(&args[1..]) {
+        Ok(m) => { m },
+        Err(f) => { panic!(f.to_string()) }
+    };
+
+    /*
+    if matches.opt_present("h") {
+        print_usage(&program, opts);
+        return;
+    }
+    */
+
+    
+    let path_str = matches.opt_str("s");
+    if let Some(p) = path_str {
+        let path = Path::new(&p);
+        visit_dirs(&path)
+    } else {
+        Err(io::Error::new(io::ErrorKind::NotFound, "invalid path"))
+    }
 }
