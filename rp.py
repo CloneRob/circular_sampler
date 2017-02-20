@@ -13,9 +13,9 @@ def calc(start_id, x, y, t):
     distances = sorted(distances, key=getKey)
     indices = []
     for ind, dist in distances:
-        indices.append(ind)
         if dist >= t:
             break
+        indices.append(ind)
 
     indices = sorted(indices, reverse=True)
     x_n = 0
@@ -36,6 +36,8 @@ def main():
 
     theta = np.random.uniform(high=2*pi, size=n)
     rho = np.sqrt(np.random.uniform(size=n))
+    print(np.max(rho))
+    print(np.min(rho))
 
     x = np.cos(theta) * rho
     y = np.sin(theta) * rho
