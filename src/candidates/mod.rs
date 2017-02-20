@@ -13,7 +13,7 @@ pub struct Point {
 }
 
 impl Point {
-    fn new(x: f64, y: f64) -> Point {
+    pub fn new(x: f64, y: f64) -> Point {
         Point {
             x: x,
             y: y,
@@ -30,11 +30,11 @@ impl Point {
         Point::new(self.x / n, self.y / n)
     }
 
-    pub fn to_int(self) -> (i32, i32) {
+    fn to_int(self) -> (i32, i32) {
         (self.x as i32, self.y as i32)
     }
 
-    pub fn to_uint(self) -> (u32, u32) {
+    fn to_uint(self) -> (u32, u32) {
         (self.x as u32, self.y as u32)
     }
 

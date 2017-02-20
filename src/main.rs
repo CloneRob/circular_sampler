@@ -16,5 +16,7 @@ fn main() {
         println!("{:?}", files[1]);
     };
     let points = candidates::generate_candidates(6000, 550f64, 35f64);
-    println!("{}", points.len());
+    let transformer = candidates::Point::new(540f64, 670f64);
+    let coords = candidates::transform_points(points, transformer);
+    println!("{}", coords.len());
 }

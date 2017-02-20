@@ -3,16 +3,21 @@ extern crate image;
 use self::image::DynamicImage;
 use std::path::PathBuf;
 
-fn open_image(path: PathBuf) -> Option<DynamicImage> {
-    let img = image::open(&path);
-    if let Ok(img) = img {
-        Some(img)
-    } else {
-        None
+struct SplitConfig {
+    path_list: Vec<PathBuf>,
+    crop_resolution: (u32, u32),
+}
+
+impl SplitConfig {
+    fn new(path_list: Vec<PathBuf>, crop_res: (u32,u32)) -> SplitConfig {
+        SplitConfig {
+            path_list: path_list,
+            crop_resolution: crop_res,
+        }
     }
 }
 
 pub fn crop(path: PathBuf) {
-    let image = open_image(path);
+    let image = image::open(&path);
     unimplemented!();
 }
