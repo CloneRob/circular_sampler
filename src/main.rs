@@ -4,13 +4,14 @@ extern crate rand;
 
 mod argparse;
 mod candidates;
+mod crop;
 
 use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     let files = argparse::parse(args);
-    if let Ok(files) = files {
+    if let Some(files) = files {
         println!("{}", files.len());
         println!("{:?}", files[1]);
     };

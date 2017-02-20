@@ -30,8 +30,12 @@ impl Point {
         Point::new(self.x / n, self.y / n)
     }
 
-    pub fn as_int(&self) -> (i32, i32) {
+    pub fn to_int(self) -> (i32, i32) {
         (self.x as i32, self.y as i32)
+    }
+
+    pub fn to_uint(self) -> (u32, u32) {
+        (self.x as u32, self.y as u32)
     }
 
 }
@@ -42,6 +46,10 @@ impl Add for Point {
         Point::new(self.x + rhs.x, self.y + rhs.y)
     }
 
+}
+
+pub fn transform_points(points: Vec<Point>, transformer: Point) -> Vec<(u32, u32)> {
+    points.iter().map(|x| (*x +  transformer).to_uint()).collect()
 }
 
 pub fn generate_candidates(n: usize, scale: f64, threshold: f64) -> Vec<Point> {

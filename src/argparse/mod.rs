@@ -32,7 +32,7 @@ fn visit_dirs(dir: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(files)
 }
 
-pub fn parse(args: Vec<String>) -> io::Result<Vec<PathBuf>> {
+pub fn parse(args: Vec<String>) -> Option<Vec<PathBuf>> {
     let program = args[0].clone();
 
     let mut opts = Options::new();
@@ -44,19 +44,21 @@ pub fn parse(args: Vec<String>) -> io::Result<Vec<PathBuf>> {
         Err(f) => { panic!(f.to_string()) }
     };
 
-    /*
     if matches.opt_present("h") {
         print_usage(&program, opts);
-        return;
+        return None;
     }
-    */
 
     
     let path_str = matches.opt_str("s");
     if let Some(p) = path_str {
         let path = Path::new(&p);
-        visit_dirs(&path)
+        if let Ok(files) = visit_dirs(&path) {
+            return Some(files);
+        } else {
+            panic!("could not locate files")
+        }
     } else {
-        Err(io::Error::new(io::ErrorKind::NotFound, "invalid path"))
+        panic!("{:?} not a valid path", path_str)
     }
 }
