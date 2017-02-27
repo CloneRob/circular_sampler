@@ -1,23 +1,32 @@
 #[allow(unused_imports, dead_code)]
-extern crate rand;
 
+use rand;
 use std::f64;
 use std::ops::Add;
 use rand::distributions::{IndependentSample, Range};
 use std::cmp::Ordering;
 
-#[derive (Copy, Clone)]
+#[derive (Copy, Clone, Debug)]
 pub struct Point {
-    x: f64, 
+    x: f64,
     y: f64,
 }
 
 impl Point {
     pub fn new(x: f64, y: f64) -> Point {
-        Point {
-            x: x,
-            y: y,
-        }
+        Point { x: x, y: y }
+    }
+
+    pub fn zero() -> Point {
+        Point { x: 0.0, y: 0.0 }
+    }
+
+    pub fn get_x(&self) -> f64 {
+        self.x
+    }
+
+    pub fn get_y(&self) -> f64 {
+        self.y
     }
 
     fn distance(&self, p: &Point) -> f64 {
@@ -35,9 +44,16 @@ impl Point {
     }
 
     fn to_uint(self) -> (u32, u32) {
+        if self.x < 0f64 || self.y < 0f64 {
+            println!("Point(x: {}, y: {})", self.x, self.y);
+            panic!("Applied to_unit() on point with negative coordinates")
+        }
         (self.x as u32, self.y as u32)
     }
 
+    fn print(&self) {
+        println!("Point(x: {}, y: {})", self.x, self.y);
+    }
 }
 
 impl Add for Point {
@@ -45,15 +61,28 @@ impl Add for Point {
     fn add(self, rhs: Point) -> Point {
         Point::new(self.x + rhs.x, self.y + rhs.y)
     }
-
 }
 
-pub fn transform_points(points: Vec<Point>, transformer: Point) -> Vec<(u32, u32)> {
-    points.iter().map(|x| (*x +  transformer).to_uint()).collect()
+pub fn transform_points(points: Vec<Point>, transformer: Point) -> Vec<Point> {
+    points.iter().map(|x| (*x + transformer)).collect()
 }
 
-pub fn generate_candidates(n: usize, scale: f64, threshold: f64) -> Vec<Point> {
-    remove_centroids(gen_coords(n, scale), threshold)
+pub fn to_coords(points: Vec<Point>, transformer: Option<Point>) -> Vec<(u32, u32)> {
+    let t = if let Some(trans) = transformer {
+        trans
+    } else {
+        Point::new(0.0, 0.0)
+    };
+    points.iter().map(|x| (*x + t).to_uint()).collect()
+}
+
+pub fn generate_candidates(n: usize, scale: f64, threshold: Option<f64>) -> Vec<Point> {
+    let points = gen_coords(n, scale);
+    if let Some(t) = threshold {
+        remove_centroids(points, t)
+    } else {
+        points
+    }
 }
 
 fn gen_coords(n: usize, scale: f64) -> Vec<Point> {
@@ -64,13 +93,13 @@ fn gen_coords(n: usize, scale: f64) -> Vec<Point> {
     let mut rng = rand::thread_rng();
 
     for _ in 0..n {
-       let t = theta_range.ind_sample(&mut rng);
-       let r = f64::sqrt(rho_range.ind_sample(&mut rng));
+        let t = theta_range.ind_sample(&mut rng);
+        let r = f64::sqrt(rho_range.ind_sample(&mut rng));
 
-       let x = f64::cos(t) * r * scale;
-       let y = f64::sin(t) * r * scale;
-       
-       nums.push(Point::new(x, y));
+        let x = f64::cos(t) * r * scale;
+        let y = f64::sin(t) * r * scale;
+
+        nums.push(Point::new(x, y));
     }
     nums
 }
@@ -81,7 +110,7 @@ fn centroid_candidates(point_slice: &[Point], threshold: f64) -> (Point, Vec<usi
         let d = point_slice[0].distance(&point);
         distances.push((i, d));
     }
-    distances.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+    distances.sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(Ordering::Less));
 
     let mut indices = Vec::new();
     for &(i, distance) in distances.iter() {
@@ -91,7 +120,7 @@ fn centroid_candidates(point_slice: &[Point], threshold: f64) -> (Point, Vec<usi
         indices.push(i);
     }
     indices.sort_by(|a, b| b.cmp(a));
-    let mut centroid = point_slice[indices[0]]; 
+    let mut centroid = Point::zero();
     for i in indices.iter() {
         centroid = centroid + point_slice[*i];
     }
@@ -106,11 +135,10 @@ fn remove_centroids(mut points: Vec<Point>, threshold: f64) -> Vec<Point> {
 
     while counter > 0 {
         let (centroid, indices) = centroid_candidates(&points[..], threshold);
-        centroids.push(centroid);
-
         for i in indices.iter() {
             points.swap_remove(*i);
         }
+        centroids.push(centroid);
         counter = counter - indices.len();
 
     }

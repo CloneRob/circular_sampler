@@ -69,6 +69,9 @@ def main():
     x.extend(x_centroids)
     y.extend(y_centroids)
 
+    print(min(x))
+    print(min(y))
+
     plt.plot(x, y, "o")
     plt.show()
 
