@@ -13,6 +13,7 @@ use std::env;
 fn main() {
     let args: Vec<String> = env::args().collect();
     if let Some(param_config) = argparse::parse(args) {
-        crop::parallel_split(&param_config);
+        println!("{}", param_config.files.len());
+        // crop::parallel_split(&param_config);
     }
 }

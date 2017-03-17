@@ -2,6 +2,15 @@ use getopts::Options;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
 
+pub enum SplitType {
+    Circular {
+        sample_size: usize,
+        threshold: Option<f64>,
+        scaling: f64,
+    },
+    Center
+}
+
 pub struct ParamConfig {
     pub files: Vec<PathBuf>,
     pub target: PathBuf,
@@ -67,7 +76,7 @@ impl ParamBuilder {
         ParamConfig::new(self.files.expect("How did this go through"),
                          self.prefix.expect(""),
                          self.target.expect(""),
-                         self.split_size.unwrap_or((96, 96)),
+                         self.split_size.unwrap_or((64, 64)),
                          self.sample_size.unwrap_or(6000),
                          self.threshold,
                          self.scaling.unwrap_or(520f64))
@@ -137,8 +146,8 @@ pub fn parse(args: Vec<String>) -> Option<ParamConfig> {
                 "target",
                 "Target path were patches will be stored",
                 "DIR");
-    opts.reqopt("r", "", "split resolution", "Int");
-    opts.reqopt("b", "threshold", "Upper bound for centroid merging", "Float");
+    opts.optopt("r", "", "split resolution", "Int");
+    opts.optopt("b", "threshold", "Upper bound for centroid merging", "Float");
     opts.optflag("h", "help", "Prints help menu");
 
     let matches = match opts.parse(&args[1..]) {

@@ -77,7 +77,7 @@ pub fn to_coords(points: Vec<Point>, transformer: Option<Point>) -> Vec<(u32, u3
 }
 
 pub fn generate_candidates(n: usize, scale: f64, threshold: Option<f64>) -> Vec<Point> {
-    let points = gen_coords(n, scale);
+    let points = circular_coords(n, scale);
     if let Some(t) = threshold {
         remove_centroids(points, t)
     } else {
@@ -85,7 +85,7 @@ pub fn generate_candidates(n: usize, scale: f64, threshold: Option<f64>) -> Vec<
     }
 }
 
-fn gen_coords(n: usize, scale: f64) -> Vec<Point> {
+fn circular_coords(n: usize, scale: f64) -> Vec<Point> {
     let mut nums = Vec::with_capacity(n);
 
     let theta_range = Range::new(0f64, f64::consts::PI * 2f64);
