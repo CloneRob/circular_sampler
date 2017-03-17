@@ -16,7 +16,7 @@ pub fn parallel_split(config: &argparse::ParamConfig) {
 
     config.files.par_iter().for_each(|path| {
         match config.split_type {
-            SplitType::Circular{ sample_size, threshold, scaling } => {
+            SplitType::Circular { sample_size, threshold, scaling } => {
                 if let Some(patches) = crop(path,
                                             config.split_size,
                                             sample_size,
@@ -64,7 +64,6 @@ fn save_patches(patches: Vec<((u32, u32), DynamicImage)>,
         }
     }
 }
-
 pub fn crop(path: &PathBuf,
             crop_resolution: (u32, u32),
             samplesize: usize,
@@ -95,6 +94,32 @@ pub fn crop(path: &PathBuf,
             patches.push((*centroid, patch.clone()));
         }
         Some(patches)
+    } else {
+        None
+    }
+}
+
+pub fn cropv2(path: &PathBuf,
+             crop_resolution: (u32, u32),
+             split_type: SplitType)
+             -> Option<Vec<((u32, u32), DynamicImage)>> {
+    let image = image::open(&path);
+    if let Ok(mut img) = image {
+        let (xdim, ydim) = img.dimensions();
+        let min_dim = min(xdim, ydim);
+        if crop_resolution.0 > min_dim {
+            None
+        } else {
+            match split_type {
+                SplitType::Center => {
+
+                },
+                SplitType::Circular { sample_size, threshold, scaling } => {
+
+                }
+            }
+            None
+        }
     } else {
         None
     }

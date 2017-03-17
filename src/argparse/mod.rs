@@ -1,6 +1,10 @@
 use getopts::Options;
 use std::path::{Path, PathBuf};
 use std::{fs, io};
+use std::io::prelude::*;
+use std::ffi::OsStr;
+use std::fs::File;
+use std::collections::HashMap;
 
 pub enum SplitType {
     Circular {
@@ -8,7 +12,7 @@ pub enum SplitType {
         threshold: Option<f64>,
         scaling: f64,
     },
-    Center
+    Center,
 }
 
 pub struct ParamConfig {
@@ -22,6 +26,7 @@ pub struct ParamConfig {
 struct ParamBuilder {
     files: Option<Vec<PathBuf>>,
     target: Option<PathBuf>,
+    label_map: Option<HashMap<String, String>>,
     prefix: Option<PathBuf>,
     split_size: Option<(u32, u32)>,
     sample_size: Option<usize>,
@@ -34,6 +39,7 @@ impl ParamBuilder {
         ParamBuilder {
             files: None,
             target: None,
+            label_map: None,
             prefix: None,
             split_size: None,
             sample_size: None,
@@ -47,6 +53,10 @@ impl ParamBuilder {
     }
     fn target(mut self, target: PathBuf) -> ParamBuilder {
         self.target = Some(target);
+        self
+    }
+    fn label_map(mut self, map: HashMap<String, String>) -> ParamBuilder {
+        self.label_map = Some(map);
         self
     }
     fn prefix(mut self, prefix: PathBuf) -> ParamBuilder {
@@ -72,13 +82,14 @@ impl ParamBuilder {
 
     fn build(self) -> ParamConfig {
         let split_type = match (self.sample_size, self.scaling) {
-            (Some(size), Some(scaling)) => {SplitType::Circular {
-                                                sample_size: size,
-                                                threshold: self.threshold,
-                                                scaling: scaling
-                                            }
-            },
-            (_, _) => { SplitType::Center }
+            (Some(size), Some(scaling)) => {
+                SplitType::Circular {
+                    sample_size: size,
+                    threshold: self.threshold,
+                    scaling: scaling,
+                }
+            }
+            (_, _) => SplitType::Center,
         };
         ParamConfig::new(self.files.expect("How did this go through"),
                          self.prefix.expect(""),
@@ -105,13 +116,30 @@ impl ParamConfig {
     }
 }
 
+
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} SOURCE_DIR DEST_DIR [options]", program);
     print!("{}", opts.usage(&brief));
 }
 
+fn label_map(dir: &Path, file_ident: &str) -> io::Result<HashMap<String, String>> {
+    let mut labelsfile = File::open(Path::join(dir, file_ident))?;
+    let mut content = String::new();
+    labelsfile.read_to_string(&mut content)?;
+
+    let mut label_map = HashMap::new();
+    for line in content.lines() {
+        let key_val: Vec<&str>  = line.split_whitespace().collect();
+        label_map.insert(String::from(key_val[0]), String::from(key_val[1]));
+
+        println!("Source:{}|{}:Label", key_val[0], key_val[1]);
+    }
+    Ok(label_map)
+}
+
 fn visit_dirs(dir: &Path) -> io::Result<Vec<PathBuf>> {
     let mut files = Vec::new();
+
     if dir.is_dir() {
         for entry in try!(fs::read_dir(dir)) {
             let entry = try!(entry);
@@ -148,7 +176,13 @@ pub fn parse(args: Vec<String>) -> Option<ParamConfig> {
                 "Target path were patches will be stored",
                 "DIR");
     opts.optopt("r", "", "split resolution", "Int");
-    opts.optopt("b", "threshold", "Upper bound for centroid merging", "Float");
+    opts.optopt("b",
+                "threshold",
+                "Upper bound for centroid merging",
+                "Float");
+    opts.optopt("l",
+                "labelfile",
+                "name of the labelfile","");
     opts.optflag("h", "help", "Prints help menu");
 
     let matches = match opts.parse(&args[1..]) {
@@ -164,17 +198,18 @@ pub fn parse(args: Vec<String>) -> Option<ParamConfig> {
     let mut param_builder = ParamBuilder::new();
 
     let source_str = matches.opt_str("s");
-    if let Some(p) = source_str {
+    let source_path = if let Some(p) = source_str {
         let path = PathBuf::from(&p);
         if let Ok(files) = visit_dirs(&path) {
-            param_builder = param_builder.prefix(path);
+            param_builder = param_builder.prefix(path.clone());
             param_builder = param_builder.files(files);
         } else {
             panic!("could not locate files")
         }
+        path
     } else {
         panic!("{:?} not a valid path", source_str)
-    }
+    };
 
     let target_str = matches.opt_str("t");
     if let Some(t) = target_str {
@@ -196,6 +231,13 @@ pub fn parse(args: Vec<String>) -> Option<ParamConfig> {
             param_builder = param_builder.threshold(thres);
         }
     }
-    
+
+    let label_str = matches.opt_str("l");
+    if let Some(l) = label_str {
+        if let Ok(map) = label_map(&source_path, &l) {
+            param_builder = param_builder.label_map(map);
+        }
+    }
+
     Some(param_builder.build())
 }
