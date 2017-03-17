@@ -16,9 +16,7 @@ pub struct ParamConfig {
     pub target: PathBuf,
     pub prefix: PathBuf,
     pub split_size: (u32, u32),
-    pub sample_size: usize,
-    pub threshold: Option<f64>,
-    pub scaling: f64,
+    pub split_type: SplitType,
 }
 
 struct ParamBuilder {
@@ -73,13 +71,20 @@ impl ParamBuilder {
     }
 
     fn build(self) -> ParamConfig {
+        let split_type = match (self.sample_size, self.scaling) {
+            (Some(size), Some(scaling)) => {SplitType::Circular {
+                                                sample_size: size,
+                                                threshold: self.threshold,
+                                                scaling: scaling
+                                            }
+            },
+            (_, _) => { SplitType::Center }
+        };
         ParamConfig::new(self.files.expect("How did this go through"),
                          self.prefix.expect(""),
                          self.target.expect(""),
                          self.split_size.unwrap_or((64, 64)),
-                         self.sample_size.unwrap_or(6000),
-                         self.threshold,
-                         self.scaling.unwrap_or(520f64))
+                         split_type)
     }
 }
 
@@ -88,18 +93,14 @@ impl ParamConfig {
            prefix: PathBuf,
            target: PathBuf,
            split_size: (u32, u32),
-           sample_size: usize,
-           threshold: Option<f64>,
-           scaling: f64)
+           split_type: SplitType)
            -> ParamConfig {
         ParamConfig {
             files: files,
             target: target,
             prefix: prefix,
             split_size: split_size,
-            sample_size: sample_size,
-            threshold: threshold,
-            scaling: scaling,
+            split_type: split_type,
         }
     }
 }

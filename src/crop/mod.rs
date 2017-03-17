@@ -1,5 +1,6 @@
 use ::candidates;
 use ::argparse;
+use ::argparse::SplitType;
 use image;
 use image::{DynamicImage, GenericImage};
 use rayon::prelude::*;
@@ -14,12 +15,19 @@ pub fn parallel_split(config: &argparse::ParamConfig) {
     let _ = DirBuilder::new().recursive(true).create(config.target.clone()).unwrap();
 
     config.files.par_iter().for_each(|path| {
-        if let Some(patches) = crop(path,
-                                    config.split_size,
-                                    config.sample_size,
-                                    config.scaling,
-                                    config.threshold) {
-            save_patches(patches, &config.prefix, path, &config.target);
+        match config.split_type {
+            SplitType::Circular{ sample_size, threshold, scaling } => {
+                if let Some(patches) = crop(path,
+                                            config.split_size,
+                                            sample_size,
+                                            scaling,
+                                            threshold) {
+                    save_patches(patches, &config.prefix, path, &config.target);
+                }
+            }
+            SplitType::Center => {
+                unimplemented!();
+            }
         }
     });
 }
