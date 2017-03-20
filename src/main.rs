@@ -12,8 +12,10 @@ use std::env;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    if let Some(param_config) = argparse::parse(args) {
-        println!("{}", param_config.files.len());
-        // crop::parallel_split(&param_config);
+    if let (Some(param_config), Some(label)) = argparse::parse(args) {
+        if let Ok(map) = param_config.label_map(&label) {
+            let saver = crop::Saver::build(&param_config, Some(map));
+            crop::parallel_split(&param_config, &saver);
+        }
     }
 }

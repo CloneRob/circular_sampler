@@ -114,27 +114,29 @@ impl ParamConfig {
             split_type: split_type,
         }
     }
+    pub fn print(&self) {
+        // println!("Files: {:?}", self.files);
+        println!("Target: {:?}", self.target);
+        println!("Prefix: {:?}", self.prefix);
+    }
+    pub fn label_map(&self, file_ident: &str) -> io::Result<HashMap<String, String>> {
+        let mut labelsfile = File::open(Path::join(&self.prefix, file_ident))?;
+        let mut content = String::new();
+        labelsfile.read_to_string(&mut content)?;
+
+        let mut label_map = HashMap::new();
+        for line in content.lines() {
+            let key_val: Vec<&str> = line.split_whitespace().collect();
+            label_map.insert(String::from(key_val[0]), String::from(key_val[1]));
+        }
+        Ok(label_map)
+    }
 }
 
 
 fn print_usage(program: &str, opts: Options) {
     let brief = format!("Usage: {} SOURCE_DIR DEST_DIR [options]", program);
     print!("{}", opts.usage(&brief));
-}
-
-fn label_map(dir: &Path, file_ident: &str) -> io::Result<HashMap<String, String>> {
-    let mut labelsfile = File::open(Path::join(dir, file_ident))?;
-    let mut content = String::new();
-    labelsfile.read_to_string(&mut content)?;
-
-    let mut label_map = HashMap::new();
-    for line in content.lines() {
-        let key_val: Vec<&str>  = line.split_whitespace().collect();
-        label_map.insert(String::from(key_val[0]), String::from(key_val[1]));
-
-        println!("Source:{}|{}:Label", key_val[0], key_val[1]);
-    }
-    Ok(label_map)
 }
 
 fn visit_dirs(dir: &Path) -> io::Result<Vec<PathBuf>> {
@@ -166,7 +168,7 @@ fn visit_dirs(dir: &Path) -> io::Result<Vec<PathBuf>> {
     Ok(files)
 }
 
-pub fn parse(args: Vec<String>) -> Option<ParamConfig> {
+pub fn parse(args: Vec<String>) -> (Option<ParamConfig>, Option<String>) {
     let program = args[0].clone();
 
     let mut opts = Options::new();
@@ -176,14 +178,19 @@ pub fn parse(args: Vec<String>) -> Option<ParamConfig> {
                 "Target path were patches will be stored",
                 "DIR");
     opts.optopt("r", "", "split resolution", "Int");
+    opts.optopt("l", "labelfile", "name of the labelfile", "");
+    opts.optflag("h", "help", "Prints help menu");
+
+    opts.optflag("c",
+                 "circular",
+                 "Use Circular split, center crop is stadard.");
     opts.optopt("b",
                 "threshold",
                 "Upper bound for centroid merging",
                 "Float");
-    opts.optopt("l",
-                "labelfile",
-                "name of the labelfile","");
-    opts.optflag("h", "help", "Prints help menu");
+    opts.optopt("", "scaling", "", "Float");
+    opts.optopt("", "sample", "", "usize");
+
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
@@ -192,7 +199,7 @@ pub fn parse(args: Vec<String>) -> Option<ParamConfig> {
 
     if matches.opt_present("h") {
         print_usage(&program, opts);
-        return None;
+        return (None, None);
     }
 
     let mut param_builder = ParamBuilder::new();
@@ -231,13 +238,20 @@ pub fn parse(args: Vec<String>) -> Option<ParamConfig> {
             param_builder = param_builder.threshold(thres);
         }
     }
-
-    let label_str = matches.opt_str("l");
-    if let Some(l) = label_str {
-        if let Ok(map) = label_map(&source_path, &l) {
-            param_builder = param_builder.label_map(map);
+    let scaling_str = matches.opt_str("scaling");
+    if let Some(s) = scaling_str {
+        if let Ok(scale) = s.parse::<f64>() {
+            param_builder = param_builder.scaling(scale);
+        }
+    }
+    let sampling_str = matches.opt_str("sample");
+    if let Some(s) = sampling_str {
+        if let Ok(sample) = s.parse::<usize>() {
+            param_builder = param_builder.sample_size(sample);
         }
     }
 
-    Some(param_builder.build())
+    let label_str = matches.opt_str("l");
+
+    (Some(param_builder.build()), label_str)
 }
